@@ -2,32 +2,178 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Visor con Cache Local</title>
+  <title>Visor Geográfico Avanzado</title>
+  
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Plugin Control de Capas Agrupadas -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.css" />
+  
+  <!-- Plugin Medición -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@3.1.0/dist/leaflet-measure.css" />
+
   <style>
-    #map { height: 100vh; width: 100%; margin: 0; }
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
+    .kml-upload-btn {
+      position: absolute;
+      top: 10px;
+      left: 60px;
+      z-index: 1000;
+      background: white;
+      padding: 6px 12px;
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Botón para importar KML local -->
+  <div class="kml-upload-btn">
+    <label for="kmlFile" style="cursor:pointer; font-family:sans-serif; font-size:12px; font-weight:bold;">
+      📂 Cargar KML
+    </label>
+    <input type="file" id="kmlFile" accept=".kml" style="display:none;" />
+  </div>
+
   <div id="map"></div>
 
+  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    var map = L.map('map').setView([-24.85, -65.45], 11);
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-groupedlayercontrol/0.6.1/leaflet.groupedlayercontrol.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-measure@3.1.0/dist/leaflet-measure.min.js"></script>
+  <!-- Parser de KML a GeoJSON -->
+  <script src="https://unpkg.com/@tmcw/togeojson@5.8.1/dist/togeojson.umd.js"></script>
 
-    // Capa base estándar
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  <script>
+    // 1. Inicialización del Mapa
+    var map = L.map('map', {
+      center: [-24.85, -65.45],
+      zoom: 11
+    });
+
+    // 2. Mapas Base
+    var argenmap = L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capasbase:argenmap_v2@EPSG%3A3857@png/{z}/{x}/{-y}.png', {
+      maxZoom: 19,
+      attribution: '© IGN Argentina'
+    }).addTo(map);
+
+    var googleSat = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      attribution: '© Google Maps'
+    });
+
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap'
+    });
+
+    // 3. Capas Temáticas (Locales y WMS)
+    var capaCacheada = L.tileLayer('tiles/{z}/{x}/{y}.png', { minZoom: 10, maxZoom: 13 });
+    
+    // Capa WMS directa (para consulta GetFeatureInfo interactiva)
+    var capaWMSDirecta = L.tileLayer.wms('https://ejemplo.gob.ar/geoserver/wms', {
+      layers: 'capa_ejemplo',
+      format: 'image/png',
+      transparent: true
+    });
+
+    // 4. Organización por Pestañas/Grupos Temáticos
+    var baseLayers = {
+      "Argenmap (IGN)": argenmap,
+      "Google Satelital": googleSat,
+      "OpenStreetMap": osm
+    };
+
+    var groupedOverlays = {
+      "Capas Pre-cacheadas": {
+        "Capa Base Offline": capaCacheada
+      },
+      "Capas Interactivas (WMS)": {
+        "Capa Consultable": capaWMSDirecta
+      },
+      "Cargas Externas": {
+        // Reservado para capas subidas por el usuario
+      }
+    };
+
+    var layerControl = L.control.groupedLayers(baseLayers, groupedOverlays, {
+      collapsed: false
     }).addTo(map);
 
-    // Tu capa cacheada localmente desde la carpeta /tiles/
-    L.tileLayer('tiles/{z}/{x}/{y}.png', {
-      minZoom: 10,
-      maxZoom: 13,
-      opacity: 0.8,
-      attribution: 'Capa WMS Cacheada'
-    }).addTo(map);
+    // 5. Herramienta de Medición
+    var measureControl = new L.Control.Measure({
+      position: 'topleft',
+      primaryLengthUnit: 'kilometers',
+      secondaryLengthUnit: 'meters',
+      primaryAreaUnit: 'hectares',
+      secondaryAreaUnit: 'sqmeters',
+      activeColor: '#db4343',
+      completedColor: '#9b2d2d'
+    });
+    measureControl.addTo(map);
+
+    // 6. Consulta de Capas (GetFeatureInfo al hacer clic)
+    map.on('click', function (e) {
+      if (!map.hasLayer(capaWMSDirecta)) return;
+
+      var loc = e.latlng;
+      var bbox = map.getBounds().toBBoxString();
+      var size = map.getSize();
+      var point = map.latLngToContainerPoint(loc, map.getZoom());
+
+      var url = 'https://ejemplo.gob.ar/geoserver/wms?' +
+        'SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo' +
+        '&LAYERS=capa_ejemplo&QUERY_LAYERS=capa_ejemplo' +
+        '&INFO_FORMAT=application/json' +
+        '&BBOX=' + bbox +
+        '&WIDTH=' + size.x +
+        '&HEIGHT=' + size.y +
+        '&X=' + Math.round(point.x) +
+        '&Y=' + Math.round(point.y);
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (data.features && data.features.length > 0) {
+            var props = data.features[0].properties;
+            var content = '<b>Información de la entidad:</b><br><table>';
+            for (var key in props) {
+              content += `<tr><td><b>${key}:</b></td><td>${props[key]}</td></tr>`;
+            }
+            content += '</table>';
+            L.popup().setLatLng(loc).setContent(content).openOn(map);
+          }
+        })
+        .catch(err => console.log('Error en GetFeatureInfo:', err));
+    });
+
+    // 7. Carga e Incorporación de archivos KML externos
+    document.getElementById('kmlFile').addEventListener('change', function (e) {
+      var file = e.target.files[0];
+      if (!file) return;
+
+      var reader = new FileReader();
+      reader.onload = function (event) {
+        var parser = new DOMParser();
+        var kmlDom = parser.parseFromString(event.target.result, 'text/xml');
+        var geojson = toGeoJSON.kml(kmlDom);
+
+        var kmlLayer = L.geoJSON(geojson, {
+          onEachFeature: function (feature, layer) {
+            if (feature.properties && feature.properties.name) {
+              layer.bindPopup(`<b>${feature.properties.name}</b><br>${feature.properties.description || ''}`);
+            }
+          }
+        }).addTo(map);
+
+        map.fitBounds(kmlLayer.getBounds());
+        layerControl.addOverlay(kmlLayer, file.name, "Cargas Externas");
+      };
+      reader.readAsText(file);
+    });
   </script>
 </body>
 </html>
