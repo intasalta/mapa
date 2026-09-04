@@ -51,11 +51,11 @@
     // 1. Inicialización del Mapa
     var map = L.map('map', {
       center: [-24.85, -65.45],
-      zoom: 11
+      zoom: 10
     });
 
     // 2. Mapas Base
-    var argenmap = L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capasbase:argenmap_v2@EPSG%3A3857@png/{z}/{x}/{-y}.png', {
+    var argenmap = L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/wmts?layer=capasbase:argenmap_v2&style=&tilematrixset=EPSG:3857&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix=EPSG:3857:{z}&TileCol={x}&TileRow={y}', {
       maxZoom: 19,
       attribution: '© IGN Argentina'
     }).addTo(map);
@@ -71,7 +71,7 @@
     });
 
     // 3. Capas Temáticas (Locales y WMS)
-    var capaCacheada = L.tileLayer('tiles/{z}/{x}/{y}.png', { minZoom: 10, maxZoom: 13 });
+    var capaCacheada = L.tileLayer('tiles/{z}/{x}/{y}.png', { minZoom: 10, maxZoom: 11 });
     
     // Capa WMS directa (para consulta GetFeatureInfo interactiva)
     var capaWMSDirecta = L.tileLayer.wms('https://ejemplo.gob.ar/geoserver/wms', {
