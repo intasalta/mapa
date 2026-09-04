@@ -5,14 +5,14 @@ import requests
 # === CONFIGURACIÓN ===
 # URL del servicio WMS que quieres pre-cachear
 WMS_URL = "https://wms.ign.gob.ar/geoserver/wms"
-LAYERS = "capasbase:limite_politico_administrativo_linea"
+LAYERS = "ign:provincia"
 
 # Bounding box de tu área de interés (min_lon, min_lat, max_lon, max_lat)
 # Ejemplo: Área aproximada
 BBOX = [-65.60, -25.00, -65.30, -24.70] 
 
 ZOOM_MIN = 10
-ZOOM_MAX = 13  # Mantener zoom moderado para no saturar almacenamiento de Git
+ZOOM_MAX = 11  # Mantener zoom moderado para no saturar almacenamiento de Git
 
 TILES_DIR = "tiles"
 
@@ -58,7 +58,7 @@ def fetch_and_save_tile(z, x, y):
     out_path = os.path.join(out_dir, f"{y}.png")
 
     try:
-        response = requests.get(WMS_URL, params=params, timeout=10)
+        response = requests.get(WMS_URL, params=params, timeout=3)
         content_type = response.headers.get("Content-Type", "")
         
         # Validar si es realmente una imagen PNG
