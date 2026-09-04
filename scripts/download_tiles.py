@@ -59,14 +59,20 @@ def fetch_and_save_tile(z, x, y):
 
     try:
         response = requests.get(WMS_URL, params=params, timeout=10)
-        if response.status_code == 200 and response.headers.get("Content-Type", "").startswith("image"):
+        content_type = response.headers.get("Content-Type", "")
+        
+        # Validar si es realmente una imagen PNG
+        if response.status_code == 200 and "image" in content_type:
             with open(out_path, "wb") as f:
                 f.write(response.content)
             print(f"OK: {z}/{x}/{y}")
         else:
-            print(f"Error HTTP {response.status_code} en {z}/{x}/{y}")
+            print(f"Error en {z}/{x}/{y}: Content-Type recibido es '{content_type}'")
+            # Muestra los primeros 300 caracteres de la respuesta XML de GeoServer
+            print(f"Detalle servidor: {response.text[:300]}")
     except Exception as e:
         print(f"Fallo al descargar {z}/{x}/{y}: {e}")
+
 
 def main():
     min_lon, min_lat, max_lon, max_lat = BBOX
