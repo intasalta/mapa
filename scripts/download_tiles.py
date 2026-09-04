@@ -4,8 +4,8 @@ import requests
 
 # === CONFIGURACIÓN ===
 # URL del servicio WMS que quieres pre-cachear
-WMS_URL = "https://ejemplo.gob.ar/geoserver/wms"
-LAYERS = "capa_ejemplo"
+WMS_URL = "https://wms.ign.gob.ar/geoserver/wms"
+LAYERS = "capasbase:limite_politico_administrativo_linea"
 
 # Bounding box de tu área de interés (min_lon, min_lat, max_lon, max_lat)
 # Ejemplo: Área aproximada
