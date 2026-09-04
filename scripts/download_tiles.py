@@ -11,8 +11,8 @@ LAYERS = "ign:provincia"
 # Ejemplo: Área aproximada
 BBOX = [-65.60, -25.00, -65.30, -24.70] 
 
-ZOOM_MIN = 10
-ZOOM_MAX = 11  # Mantener zoom moderado para no saturar almacenamiento de Git
+ZOOM_MIN = 6
+ZOOM_MAX = 8  # Mantener zoom moderado para no saturar almacenamiento de Git
 
 TILES_DIR = "tiles"
 
